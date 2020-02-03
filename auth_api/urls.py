@@ -16,10 +16,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from account.views import activate_account
+from account.views import activate_account, reset_password
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/account/', include('account.urls')),
     path('activate/<uidb64>/<token>/', activate_account ,name='activate_page'),
+    path('reset-password/<token>/', reset_password ,name='reset_password_page'),
 ]

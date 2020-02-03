@@ -6,7 +6,9 @@ from .views import (
     register, 
     activate_account, 
     test, 
-    LoginView
+    LoginView,
+    reset_password,
+    reset_password_confirm
 )
 
 
@@ -15,9 +17,9 @@ urlpatterns = [
     path('activate/', activate_account),
     path('login/', LoginView.as_view()),
     path('token-refresh/', TokenRefreshView.as_view()),
-    path('reset-password/', test),
-    path('reset-password/confirm/', test),
-    path('change-password/', test),
+    path('reset-password/', reset_password),
+    path('reset-password/confirm/', reset_password_confirm),
+    #path('change-password/', test),
 
     path('test/', test),
 ]
