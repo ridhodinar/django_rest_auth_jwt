@@ -22,5 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/account/', include('account.urls')),
     path('activate/<uidb64>/<token>/', activate_account ,name='activate_page'),
-    path('reset-password/<token>/', reset_password ,name='reset_password_page'),
+    path('reset-password/<uidb64>/<token>/', reset_password ,name='reset_password_page'),
 ]

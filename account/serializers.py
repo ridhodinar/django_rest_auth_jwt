@@ -22,3 +22,13 @@ class RegisterSerializer(serializers.ModelSerializer):
             return account
         else: 
             raise serializers.ValidationError({'detail':'passwords did not match'})
+
+class ChangePasswordSerializer(serializers.Serializer):
+    password1 = serializers.CharField()
+    password2 = serializers.CharField()
+
+    def validate(self, attrs):
+        if attrs['password1'] == attrs['password2'] :
+            return attrs['password1']
+        else :
+            raise serializers.ValidationError({'detail':'passwords did not match'})
