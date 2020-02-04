@@ -1,9 +1,14 @@
 from rest_framework import serializers
 from .models import Account
+from rest_framework.validators import UniqueValidator
+from .validators import *
 
 class RegisterSerializer(serializers.ModelSerializer):
     
-    password2 = serializers.CharField(max_length=None, min_length=None, allow_blank=False)
+    username = serializers.CharField(validators=[UniqueValidator(queryset=Account.objects.all())])
+    email = serializers.EmailField(validators=[UniqueValidator(queryset=Account.objects.all())])
+    password = serializers.CharField(validators=[password_min_length])
+    password2 = serializers.CharField(validators=[password_min_length])
 
     class Meta:
         model = Account
@@ -15,20 +20,36 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             username=validated_data['username']
         )
-        if validated_data['password'] == validated_data['password2']:
-            account.set_password(validated_data['password'])
-            account .is_active = False
-            account.save()
-            return account
-        else: 
-            raise serializers.ValidationError({'detail':'passwords did not match'})
+
+        password_match(validated_data['password'], validated_data['password2'])
+
+        account.set_password(validated_data['password'])
+        account .is_active = False
+        account.save()
+        return account
 
 class ChangePasswordSerializer(serializers.Serializer):
-    password1 = serializers.CharField()
-    password2 = serializers.CharField()
+    password1 = serializers.CharField(validators=[password_min_length])
+    password2 = serializers.CharField(validators=[password_min_length])
 
     def validate(self, attrs):
-        if attrs['password1'] == attrs['password2'] :
-            return attrs['password1']
-        else :
-            raise serializers.ValidationError({'detail':'passwords did not match'})
+        password_match(attrs['password1'], attrs['password2'])
+        return attrs
+
+class ActivaAccountSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    
+    def validate(self, attrs):
+        data = {}
+
+        data['uid'] = attrs['uid']
+        data['token'] = attrs['token']
+        
+        return data
+
+class ResetPasswordConfirmSerializer(ChangePasswordSerializer, ActivaAccountSerializer):
+    pass
+
+
+

@@ -15,8 +15,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenViewBase
 from rest_framework_simplejwt.serializers  import TokenObtainPairSerializer
 
-from .serializers import RegisterSerializer, ChangePasswordSerializer
+from .serializers import (
+    ResetPasswordConfirmSerializer, 
+    RegisterSerializer, 
+    ChangePasswordSerializer,
+    ActivaAccountSerializer
+)
 from .token_generator import account_activation_token, reset_password_token
+from django.contrib.auth.models import User
 from .models import Account
 from .permission import APILoginPermission
 
@@ -36,7 +42,7 @@ class LoginView(TokenViewBase):
 def register(req):
     serializer = RegisterSerializer(data=req.data)
 
-    if serializer.is_valid():
+    if serializer.is_valid(raise_exception=True):
         account = serializer.save()
 
         SendEmail(req, account)
@@ -51,24 +57,27 @@ def activate_account(req, **args):
         return HttpResponse('click here !!!!!')
     
     if req.method == 'POST' :
-
-        uidb64 = req.data['uid']
-        token = req.data['token']
-
-        try:
-            uid = force_bytes(urlsafe_base64_decode(uidb64))
-            account = Account.objects.get(pk=uid)
-        except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
-            account = None
-
-        if account is not None and account_activation_token.check_token(account, token):
+        serializer = ActivaAccountSerializer(data=req.data)
+        
+        if serializer.is_valid(raise_exception=True):
+            #return Response(serializer.validated_data)
             
-            account.is_active = True
-            account.save()
-            
-            return Response({'detail':'Your account has been activate successfully'})
+            try:
+                uid = force_bytes(urlsafe_base64_decode(serializer.validated_data['uid']))
+                account = Account.objects.get(pk=uid)
+            except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+                account = None
+
+            if account is not None and account_activation_token.check_token(account, serializer.validated_data['token']):
+                
+                account.is_active = True
+                account.save()
+                
+                return Response({'detail':'Your account has been activate successfully'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'detail':'Activation link is invalid!'}, status=status.HTTP_400_BAD_REQUEST)        
         else:
-            return Response({'detail':'Activation link is invalid!'})
+            return Response(serializer.errors)
 
 @api_view(['GET','POST'])
 def reset_password(req, **args):
@@ -78,34 +87,31 @@ def reset_password(req, **args):
         
         SendEmailPassword(req, account)
        
-        return Response({'detail':'Please check your email to reset password'})
+        return Response({'detail':'Please check your email to reset password'}, status=status.HTTP_200_OK)
     
     if req.method == 'GET' :
         return HttpResponse('Resetting password . . .')
 
 @api_view(['POST'])
 def reset_password_confirm(req, **args):
-    serializer = ChangePasswordSerializer(data=req.data)
+    serializer = ResetPasswordConfirmSerializer(data=req.data)
     
-    uidb64 = req.data['uid']
-    token = req.data['token']
-
-    if serializer.is_valid():
-        
+    if serializer.is_valid(raise_exception=True):
+        #return Response(serializer.validated_data)
         try:
-            uid = force_bytes(urlsafe_base64_decode(uidb64))
+            uid = force_bytes(urlsafe_base64_decode(serializer.validated_data['uid']))
             account = Account.objects.get(pk=uid)
         except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
             account = None
         
-        if account is not None and reset_password_token.check_token(account, token):
+        if account is not None and reset_password_token.check_token(account, serializer.validated_data['token']):
             
             account.set_password(serializer.validated_data)
             account.save()
 
             return Response({'detail':'Successfully reset password'})
         else:
-            return Response({'detail':'Link is invalid!'})
+            return Response({'detail':'Link is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
     else:
         return Response(serializer.errors)
 
@@ -115,14 +121,12 @@ def change_password(req):
     
     serializer = ChangePasswordSerializer(data=req.data)
     
-    if serializer.is_valid():
-    
-            account = Account.objects.get(username=req.user.username)
+    if serializer.is_valid(raise_exception=True):
 
-            account.set_password(serializer.validated_data)
-            account.save()
-
-            return Response({'detail':'Successfully reset password'})
+        account = Account.objects.get(username=req.user.username)
+        account.set_password(serializer.validated_data['password1'])
+        account.save()
+        return Response({'detail':'Successfully reset password'})
     else:
         return Response(serializer.errors)
 
